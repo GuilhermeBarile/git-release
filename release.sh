@@ -23,7 +23,13 @@ if [ ! -f "$FILELIST" ]; then
     exit 2
 fi
 
-VERSION=$(cat $PACKAGE_JSON | grep \"version\" | grep -oE '([0-9]+\.?)+')
+PACKAGE_NAME=$(cat $PACKAGE_JSON | grep -oP '\"name\"[^"]+\"\K([^"]+)')
+if [ -z "$PACKAGE_NAME" ]; then
+    echo "Invalid package name $PACKAGE_NAME";
+    exit 3
+fi
+
+VERSION=$(cat $PACKAGE_JSON | grep -oP '\"version\"[^"]+\"\K([0-9]+\.[0-9]+\.[0-9]+)')
 if [ -z "$VERSION" ]; then
     echo "Invalid version $VERSION";
     exit 3
@@ -36,14 +42,19 @@ fi
 
 BUILD_ROOT="$REPO/build"
 
-[ -d "$BUILD_ROOT" ] && rm -rf "$BUILD_ROOT";
+[ -d "$BUILD_ROOT/$VERSION" ] && rm -rf "$BUILD_ROOT/$VERSION";
 
-mkdir "$BUILD_ROOT";
+mkdir -p "$BUILD_ROOT/$VERSION/$PACKAGE_NAME";
 
-# TODO
-# rsync -av --files-from="$FILELIST"
+# ---------------------------------------------------------------------------
 
 echo "Releasing $(basename $REPO) v$VERSION";
+
+# Copy project files to the build subdirectory
+rsync -a --files-from="$FILELIST" "$REPO" "$BUILD_ROOT/$VERSION/$PACKAGE_NAME"
+
+# Create the tar distribution
+tar -C "$BUILD_ROOT/$VERSION/" -cvzf "$BUILD_ROOT/$PACKAGE_NAME-$VERSION.tgz" "$PACKAGE_NAME"
 
 TAG_MESSAGE="v$VERSION release"
 
@@ -53,6 +64,8 @@ if [ -f "$CHANGELOG" ]; then
 fi
 
 cat /dev/null > "$CHANGELOG"
+
+# TODO if commit...
 
 $git tag -a v$VERSION -m "$TAG_MESSAGE"
 
