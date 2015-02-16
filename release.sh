@@ -12,7 +12,7 @@ if [ $x -ne 0 ]; then
 fi
 
 PACKAGE_JSON="$REPO/package.json"
-if [ ! -f   ]; then
+if [ ! -f "$PACKAGE_JSON" ]; then
     echo "$PACKAGE_JSON not found";
     exit 1
 fi
